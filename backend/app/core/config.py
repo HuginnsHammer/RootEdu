@@ -19,6 +19,8 @@ class Settings(BaseSettings):
         "CT204": "Bachelor of Computer Technology",
         "CT201": "Bachelor of Computer Science",
     })
+    database_url: str = "postgresql+psycopg://rootedu:rootedu_dev_only@localhost:5432/rootedu"
+    redis_url: str = "redis://localhost:6379/0"
 
 
 @lru_cache
