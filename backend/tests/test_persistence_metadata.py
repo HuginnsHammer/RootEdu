@@ -1,5 +1,5 @@
-from app.db.base import Base
 from app.db import models  # noqa: F401
+from app.db.base import Base
 
 
 def test_event_streams_are_separate_tables() -> None:
@@ -12,4 +12,7 @@ def test_tenant_scoped_tables_have_institution_foreign_keys() -> None:
     for table_name in ("programmes", "academic_cohorts", "audit_events", "security_events"):
         table = Base.metadata.tables[table_name]
         assert table.c.institution_id is not None
-        assert any(fk.target_fullname == "institutions.id" for fk in table.c.institution_id.foreign_keys)
+        assert any(
+            fk.target_fullname == "institutions.id"
+            for fk in table.c.institution_id.foreign_keys
+        )
