@@ -17,7 +17,9 @@ class DomainPolicy:
         self.institution_name = settings.institution_name
         self.allowed_email_domains = {d.lower().strip() for d in settings.allowed_email_domains}
         self.registration_prefixes = {p.upper().strip() for p in settings.registration_prefixes}
-        self.programme_catalog = {k.upper().strip(): v for k, v in settings.programme_catalog.items()}
+        self.programme_catalog = {
+            key.upper().strip(): value for key, value in settings.programme_catalog.items()
+        }
 
     def email_domain_allowed(self, email: str) -> bool:
         domain = email.rpartition("@")[2].lower()
