@@ -3,7 +3,6 @@ from uuid import UUID
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
-
 from app.core.config import get_settings
 
 
