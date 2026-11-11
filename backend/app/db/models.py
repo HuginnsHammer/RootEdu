@@ -1,7 +1,15 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,7 +41,10 @@ class Programme(Base):
 class AcademicCohort(Base):
     __tablename__ = "academic_cohorts"
     __table_args__ = (
-        UniqueConstraint("institution_id", "programme_id", "academic_year", "semester", "cohort_code", name="uq_cohort_scope"),
+        UniqueConstraint(
+            "institution_id", "programme_id", "academic_year", "semester", "cohort_code",
+            name="uq_cohort_scope",
+        ),
         CheckConstraint("semester > 0", name="ck_cohort_semester_positive"),
         Index("ix_cohorts_institution_year", "institution_id", "academic_year"),
     )
@@ -66,7 +77,10 @@ class SecurityEvent(Base):
     __tablename__ = "security_events"
     __table_args__ = (
         Index("ix_security_institution_created", "institution_id", "created_at"),
-        CheckConstraint("severity IN ('info', 'low', 'medium', 'high', 'critical')", name="ck_security_event_severity"),
+        CheckConstraint(
+            "severity IN ('info', 'low', 'medium', 'high', 'critical')",
+            name="ck_security_event_severity",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
