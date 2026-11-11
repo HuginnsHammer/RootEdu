@@ -1,0 +1,7 @@
+RootEdu Alembic migrations.
+
+Run from the backend directory after installing requirements and configuring DATABASE_URL:
+
+    alembic upgrade head
+
+The initial migration creates tenant and academic-scope foundations, plus distinct audit and security event tables. Tenant-scoped tables use PostgreSQL row-level security. Runtime queries must set the transaction-local `app.tenant_id` only after authentication, using a trusted institution ID from server-side identity. Never trust a client-supplied tenant identifier.

@@ -9,13 +9,6 @@ class PilotProgramme:
     name: str
 
 
-PILOT_PROGRAMMES = {
-    "CT206": "Bachelor of Computer Security and Forensics",
-    "CT204": "Bachelor of Computer Technology",
-    "CT201": "Bachelor of Computer Science",
-}
-
-
 class DomainPolicy:
     """MUST pilot policy; matching a domain or prefix does not prove enrollment."""
 
@@ -24,6 +17,7 @@ class DomainPolicy:
         self.institution_name = settings.institution_name
         self.allowed_email_domains = {d.lower().strip() for d in settings.allowed_email_domains}
         self.registration_prefixes = {p.upper().strip() for p in settings.registration_prefixes}
+        self.programme_catalog = {k.upper().strip(): v for k, v in settings.programme_catalog.items()}
 
     def email_domain_allowed(self, email: str) -> bool:
         domain = email.rpartition("@")[2].lower()
@@ -38,6 +32,6 @@ class DomainPolicy:
         if len(parts) != 3 or not parts[1].isdigit() or not parts[2].isdigit():
             return None
         code = parts[0]
-        if code not in self.registration_prefixes or code not in PILOT_PROGRAMMES:
+        if code not in self.registration_prefixes or code not in self.programme_catalog:
             return None
-        return PilotProgramme(code=code, name=PILOT_PROGRAMMES[code])
+        return PilotProgramme(code=code, name=self.programme_catalog[code])

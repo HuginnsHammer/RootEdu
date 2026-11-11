@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "RootEdu", "slug": "rootedu", "scheme": "rootedu",
+    "version": "0.1.0", "orientation": "portrait",
+    "userInterfaceStyle": "automatic", "newArchEnabled": true,
+    "ios": { "supportsTablet": true, "bundleIdentifier": "lab.rootweights.rootedu" },
+    "android": { "package": "lab.rootweights.rootedu" },
+    "plugins": ["expo-router", ["expo-secure-store", { "configureAndroidBackup": true }], "expo-sqlite"]
+  }
+}
