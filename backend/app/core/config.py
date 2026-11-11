@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     institution_name: str = "Meru University of Science and Technology"
     allowed_email_domains: list[str] = Field(default_factory=lambda: ["students.must.ac.ke"])
     registration_prefixes: list[str] = Field(default_factory=lambda: ["CT206", "CT204", "CT201"])
+    programme_catalog: dict[str, str] = Field(default_factory=lambda: {
+        "CT206": "Bachelor of Computer Security and Forensics",
+        "CT204": "Bachelor of Computer Technology",
+        "CT201": "Bachelor of Computer Science",
+    })
 
 
 @lru_cache
