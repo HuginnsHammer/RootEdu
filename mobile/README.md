@@ -44,11 +44,13 @@ If the phone cannot reach the API, check the laptop firewall and ensure both dev
 
 ## Installable Android APK
 
+Every pull-request CI run also attempts to build a development-only debug APK and publish it as the `rootedu-android-debug-apk` workflow artifact. Download it from the successful CI run's Artifacts section. This debug build permits local-network HTTP for development only; it is not suitable for production distribution.
+
 An internal APK profile is configured in `eas.json`:
 
 ```sh
 cd mobile
-npx eas-cli build --platform android --profile preview
+APP_VARIANT=development npx eas-cli build --platform android --profile preview
 ```
 
 This requires an Expo account and a configured EAS project. The resulting APK is a development/pilot build, not a production release.
