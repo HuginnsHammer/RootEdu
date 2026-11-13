@@ -37,7 +37,15 @@ def test_ed25519_device_signature_verifies_canonical_payload() -> None:
     private_key = Ed25519PrivateKey.generate()
     public_key = private_key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
     session_id, student_id, device_id = uuid4(), uuid4(), uuid4()
-    message = canonical_checkin_message(session_id, student_id, device_id, "nonce-value", "123456", "room-token")
+    message = canonical_checkin_message(
+        session_id, student_id, device_id, "nonce-value", "123456", "room-token", "ble", -60
+    )
     signature = private_key.sign(message)
-    assert verify_device_signature(base64.b64encode(public_key).decode(), base64.b64encode(signature).decode(), message)
-    assert not verify_device_signature(base64.b64encode(public_key).decode(), base64.b64encode(signature).decode(), message + b"x")
+    public_b64 = base64.b64encode(public_key).decode()
+    signature_b64 = base64.b64encode(signature).decode()
+    assert verify_device_signature(public_b64, signature_b64, message)
+    assert not verify_device_signature(public_b64, signature_b64, message + b"x")
+    changed_signal = canonical_checkin_message(
+        session_id, student_id, device_id, "nonce-value", "123456", "room-token", "ble", -80
+    )
+    assert not verify_device_signature(public_b64, signature_b64, changed_signal)
