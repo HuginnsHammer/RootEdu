@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     })
     database_url: str = "postgresql+psycopg://rootedu:rootedu_dev_only@localhost:5432/rootedu"
     redis_url: str = "redis://localhost:6379/0"
+    attendance_hmac_secret: str | None = None
 
     feedback_recipient: str = "trialsandwins@gmail.com"
     feedback_smtp_host: str | None = None
