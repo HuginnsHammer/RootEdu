@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.attendance import router as attendance_router
 from app.api.routes.feedback import router as feedback_router
@@ -13,6 +14,15 @@ app = FastAPI(
     docs_url="/docs" if settings.app_env == "development" else None,
     redoc_url=None,
 )
+if settings.web_allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.web_allowed_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Accept", "Content-Type"],
+    )
+
 app.include_router(health_router, prefix=settings.api_v1_prefix)
 app.include_router(mobile_router, prefix=settings.api_v1_prefix)
 app.include_router(feedback_router, prefix=settings.api_v1_prefix)
