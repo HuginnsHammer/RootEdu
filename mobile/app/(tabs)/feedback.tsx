@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { apiRequest } from "../../src/api/client";
 import { Screen, palette, styles } from "../../src/components/Screen";
@@ -32,7 +32,7 @@ export default function FeedbackScreen() {
           message: message.trim(),
           reply_email: replyEmail.trim() || null,
           app_version: "0.1.0",
-          device_platform: "android",
+          device_platform: Platform.OS === "android" ? "android" : Platform.OS === "ios" ? "ios" : "unknown",
         }),
       });
       setNotice({ ok: true, text: result.message });
