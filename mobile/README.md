@@ -53,7 +53,7 @@ RootEdu uses `expo-updates` and Expo Updates-compatible channels. OTA can update
 3. Generate the OTA signing key pair from the repository root:
 
    ```sh
-   ./scripts/generate-ota-signing-key.sh
+   bash scripts/generate-ota-signing-key.sh
    ```
 
 4. Commit `mobile/certs/rootedu-ota-certificate.pem`. Never commit `secrets/rootedu-ota-private-key.pem`. Back up the private key in an encrypted vault.
