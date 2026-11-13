@@ -2,6 +2,7 @@ from datetime import timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db, set_tenant_context
@@ -40,9 +41,9 @@ def attendance_check_in(
     identity: dict = Depends(authenticated_student),
     db: Session = Depends(get_db),
 ) -> AttendanceReceipt:
-    set_tenant_context(db, identity["institution_id"])
     try:
         with db.begin():
+            set_tenant_context(db, identity["institution_id"])
             checkin_id, verified_at, assurance = check_in(
                 db,
                 institution_id=identity["institution_id"],
@@ -59,6 +60,7 @@ def attendance_check_in(
             )
     except AttendanceRejected as exc:
         with db.begin():
+            set_tenant_context(db, identity["institution_id"])
             log_security_event(
                 db,
                 institution_id=identity["institution_id"],
@@ -68,6 +70,21 @@ def attendance_check_in(
                 details={"message": exc.message, "session_id": str(payload.session_id)},
             )
         raise HTTPException(status_code=403, detail=exc.message) from exc
+    except IntegrityError as exc:
+        constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+        if constraint not in {"uq_attendance_once_per_student", "attendance_checkins_nonce_hash_key"}:
+            raise
+        with db.begin():
+            set_tenant_context(db, identity["institution_id"])
+            log_security_event(
+                db,
+                institution_id=identity["institution_id"],
+                student_id=identity["student_id"],
+                event_type="REPLAY_ATTACK_DETECTED",
+                severity="critical",
+                details={"session_id": str(payload.session_id), "constraint": str(constraint)},
+            )
+        raise HTTPException(status_code=409, detail="This attendance challenge has already been used.") from exc
 
     return AttendanceReceipt(
         checkin_id=checkin_id,
