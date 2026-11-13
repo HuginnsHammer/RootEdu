@@ -5,6 +5,7 @@ const items = [
   { name: "index", title: "Home", icon: "grid-outline" as const },
   { name: "resources", title: "Library", icon: "library-outline" as const },
   { name: "timetable", title: "Timetable", icon: "calendar-outline" as const },
+  { name: "feedback", title: "Feedback", icon: "chatbubble-ellipses-outline" as const },
   { name: "profile", title: "Account", icon: "person-circle-outline" as const },
 ];
 
