@@ -98,4 +98,7 @@ async def submit_feedback(payload: FeedbackSubmission, request: Request) -> dict
             detail="Feedback could not be delivered. Please try again later.",
         ) from exc
 
-    return {"status": "accepted", "message": "Thank you. Your feedback has been emailed to the RootEdu team."}
+    return {
+        "status": "accepted",
+        "message": "Thank you. Your feedback has been emailed to the RootEdu team.",
+    }
