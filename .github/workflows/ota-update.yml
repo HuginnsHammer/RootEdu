@@ -1,0 +1,81 @@
+name: Publish signed RootEdu OTA update
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        required: true
+        type: choice
+        options: [staging, production]
+        default: staging
+      rollout_percentage:
+        description: Production rollout percentage (staging always uses 100)
+        required: false
+        type: number
+        default: 10
+      message:
+        description: Release summary
+        required: true
+        type: string
+        default: RootEdu OTA update
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || vars.ROOTEDU_OTA_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'push' && 'staging' || inputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate release signing configuration
+        env:
+          ROOTEDU_OTA_PRIVATE_KEY: ${{ secrets.ROOTEDU_OTA_PRIVATE_KEY }}
+          EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EXPO_PUBLIC_EAS_PROJECT_ID }}
+        run: |
+          test -n "$ROOTEDU_OTA_PRIVATE_KEY" || { echo "Missing ROOTEDU_OTA_PRIVATE_KEY secret"; exit 1; }
+          test -n "$EXPO_PUBLIC_EAS_PROJECT_ID" || { echo "Missing EXPO_PUBLIC_EAS_PROJECT_ID repository variable"; exit 1; }
+          test -s mobile/certs/rootedu-ota-certificate.pem || { echo "Missing committed OTA public certificate"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/rootedu-signing"
+          printf '%s\n' "$ROOTEDU_OTA_PRIVATE_KEY" > "$RUNNER_TEMP/rootedu-signing/private-key.pem"
+          chmod 600 "$RUNNER_TEMP/rootedu-signing/private-key.pem"
+          openssl pkey -in "$RUNNER_TEMP/rootedu-signing/private-key.pem" -pubout -out "$RUNNER_TEMP/rootedu-signing/private-public.pem"
+          openssl x509 -in mobile/certs/rootedu-ota-certificate.pem -pubkey -noout > "$RUNNER_TEMP/rootedu-signing/cert-public.pem"
+          diff -u "$RUNNER_TEMP/rootedu-signing/private-public.pem" "$RUNNER_TEMP/rootedu-signing/cert-public.pem"
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm install --no-audit --no-fund
+      - name: Publish signed update
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EXPO_PUBLIC_EAS_PROJECT_ID }}
+          CHANNEL_INPUT: ${{ inputs.channel }}
+          ROLLOUT_INPUT: ${{ inputs.rollout_percentage }}
+          RELEASE_MESSAGE: ${{ inputs.message }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          test -n "$EXPO_TOKEN" || { echo "Missing EXPO_TOKEN secret"; exit 1; }
+          npm install --global eas-cli
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            CHANNEL="staging"
+            MESSAGE="Staging: ${GITHUB_SHA} — automatic post-merge update"
+            ROLLOUT="100"
+          else
+            CHANNEL="$CHANNEL_INPUT"
+            MESSAGE="$RELEASE_MESSAGE (${GITHUB_SHA})"
+            ROLLOUT="$ROLLOUT_INPUT"
+          fi
+          if [ "$CHANNEL" = "production" ]; then
+            eas update --channel "$CHANNEL" --message "$MESSAGE" --rollout-percentage "$ROLLOUT" --private-key-path "$RUNNER_TEMP/rootedu-signing/private-key.pem" --non-interactive
+          else
+            eas update --channel "$CHANNEL" --message "$MESSAGE" --private-key-path "$RUNNER_TEMP/rootedu-signing/private-key.pem" --non-interactive
+          fi
