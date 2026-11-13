@@ -12,6 +12,17 @@ depends_on = None
 
 def upgrade() -> None:
     op.create_table(
+        "student_cohort_memberships",
+        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column("institution_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("institutions.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("student_id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("cohort_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("academic_cohorts.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    op.create_index("uq_student_active_cohort", "student_cohort_memberships", ["institution_id", "student_id", "cohort_id"], unique=True, postgresql_where=sa.text("is_active = true"))
+
+    op.create_table(
         "user_devices",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("institution_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("institutions.id", ondelete="RESTRICT"), nullable=False),
@@ -56,7 +67,7 @@ def upgrade() -> None:
         sa.CheckConstraint("proximity_method IN ('ble', 'ultrasound', 'mock')", name="ck_attendance_proximity_method"),
     )
     op.create_index("ix_attendance_checkins_session", "attendance_checkins", ["institution_id", "session_id", "verified_at"])
-    for table in ("user_devices", "attendance_sessions", "attendance_checkins"):
+    for table in ("student_cohort_memberships", "user_devices", "attendance_sessions", "attendance_checkins"):
         op.execute(sa.text(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY'))
         op.execute(sa.text(f'ALTER TABLE "{table}" FORCE ROW LEVEL SECURITY'))
         op.execute(sa.text(f"""
@@ -67,5 +78,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    for table in ("attendance_checkins", "attendance_sessions", "user_devices"):
+    for table in ("attendance_checkins", "attendance_sessions", "user_devices", "student_cohort_memberships"):
         op.drop_table(table)
