@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://rootedu:rootedu_dev_only@localhost:5432/rootedu"
     redis_url: str = "redis://localhost:6379/0"
 
+    feedback_recipient: str = "trialsandwins@gmail.com"
+    feedback_smtp_host: str | None = None
+    feedback_smtp_port: int = 587
+    feedback_smtp_username: str | None = None
+    feedback_smtp_password: str | None = None
+    feedback_smtp_from: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:
