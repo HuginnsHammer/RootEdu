@@ -61,34 +61,23 @@ jobs:
         run: |
           sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
       - run: npm install --no-audit --no-fund
-      - run: APP_VARIANT=development npx expo prebuild --platform android --no-install
-      - name: Diagnose Expo Android autolinking metadata
-        run: |
-          npx expo-modules-autolinking resolve --platform android --json > /tmp/rootedu-autolinking.json
-          node - <<'NODE'
-          const data = require('/tmp/rootedu-autolinking.json');
-          for (const [index, module] of (data.modules ?? []).entries()) {
-            console.log(JSON.stringify({
-              index,
-              packageName: module.packageName,
-              packageVersion: module.packageVersion,
-              projects: (module.projects ?? []).map(project => ({
-                name: project.name,
-                path: project.path,
-                publication: project.publication,
-                shouldUsePublicationScriptPath: project.shouldUsePublicationScriptPath,
-              })),
-            }));
-          }
-          NODE
-      - name: Build installable debug APK
+      # Do not set APP_VARIANT=development: the distributed APK must not
+      # depend on Metro or the Expo development client.
+      - name: Generate standalone Android project
+        run: npx expo prebuild --platform android --no-install
+      - name: Build standalone installable APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
+      - name: Verify APK contains a packaged JavaScript bundle
+        run: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          unzip -l "$APK" | grep -E 'assets/index.android.bundle|assets/.*\.bundle'
       - uses: actions/upload-artifact@v4
         with:
-          name: rootedu-android-debug-apk
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: rootedu-android-standalone-apk
+          path: mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
