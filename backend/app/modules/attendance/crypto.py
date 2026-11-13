@@ -46,6 +46,8 @@ def canonical_checkin_message(
     nonce: str,
     code: str,
     room_token_value: str,
+    proximity_method: str,
+    rssi_dbm: int | None,
 ) -> bytes:
     fields = (
         "rootedu-attendance-checkin-v1",
@@ -55,6 +57,8 @@ def canonical_checkin_message(
         nonce,
         code,
         room_token_value,
+        proximity_method,
+        "" if rssi_dbm is None else str(rssi_dbm),
     )
     return "\n".join(fields).encode("utf-8")
 
