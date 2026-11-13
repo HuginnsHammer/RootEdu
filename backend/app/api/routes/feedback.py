@@ -78,7 +78,6 @@ async def submit_feedback(payload: FeedbackSubmission, request: Request) -> dict
         f"App version: {payload.app_version}\n"
         f"Platform: {payload.device_platform}\n"
         f"Reply email: {payload.reply_email or 'Not provided'}\n"
-        f"Client IP: {request.client.host if request.client else 'unknown'}\n\n"
         f"{payload.message}"
     )
 
