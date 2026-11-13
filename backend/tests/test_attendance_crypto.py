@@ -6,11 +6,11 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from app.modules.attendance.crypto import (
     canonical_checkin_message,
-    room_token,
     rolling_code,
+    room_token,
     verify_device_signature,
-    verify_room_token,
     verify_rolling_code,
+    verify_room_token,
 )
 
 
@@ -38,7 +38,14 @@ def test_ed25519_device_signature_verifies_canonical_payload() -> None:
     public_key = private_key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
     session_id, student_id, device_id = uuid4(), uuid4(), uuid4()
     message = canonical_checkin_message(
-        session_id, student_id, device_id, "nonce-value", "123456", "room-token", "ble", -60
+        session_id,
+        student_id,
+        device_id,
+        "nonce-value",
+        "123456",
+        "room-token",
+        "ble",
+        -60,
     )
     signature = private_key.sign(message)
     public_b64 = base64.b64encode(public_key).decode()
@@ -46,6 +53,13 @@ def test_ed25519_device_signature_verifies_canonical_payload() -> None:
     assert verify_device_signature(public_b64, signature_b64, message)
     assert not verify_device_signature(public_b64, signature_b64, message + b"x")
     changed_signal = canonical_checkin_message(
-        session_id, student_id, device_id, "nonce-value", "123456", "room-token", "ble", -80
+        session_id,
+        student_id,
+        device_id,
+        "nonce-value",
+        "123456",
+        "room-token",
+        "ble",
+        -80,
     )
     assert not verify_device_signature(public_b64, signature_b64, changed_signal)
