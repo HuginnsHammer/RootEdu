@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.routes.feedback import router as feedback_router
 from app.api.routes.health import router as health_router
 from app.api.routes.mobile import router as mobile_router
 from app.core.config import get_settings
@@ -13,3 +14,4 @@ app = FastAPI(
 )
 app.include_router(health_router, prefix=settings.api_v1_prefix)
 app.include_router(mobile_router, prefix=settings.api_v1_prefix)
+app.include_router(feedback_router, prefix=settings.api_v1_prefix)
