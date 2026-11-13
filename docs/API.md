@@ -8,8 +8,12 @@ RootEdu exposes a versioned, client-agnostic HTTP API. Mobile is the first clien
 |---|---|---|---|
 | GET | `/api/v1/health` | Process liveness | Implemented |
 | GET | `/api/v1/ready` | PostgreSQL connectivity check | Implemented |
+| GET | `/api/v1/mobile/bootstrap` | Public, non-personalized pilot configuration | Implemented |
+| POST | `/api/v1/feedback` | Validate and email beta feedback | Implemented; SMTP and Redis required |
 
-The readiness endpoint returns HTTP 503 with a stable error code when PostgreSQL cannot be reached. It does not expose connection strings, SQL, host details, or stack traces. Redis and object-storage checks will be added when their adapters become required for serving traffic.
+### Beta feedback
+
+The request accepts a category (`bug`, `idea`, `experience`, `other`), a 10–5,000 character message, an optional reply email, app version and device platform. The recipient defaults to `trialsandwins@gmail.com`. SMTP credentials remain server-side. Redis enforces a five-submission-per-hour per-client-address limit; the endpoint fails closed if Redis is unavailable. It returns 202 only after the SMTP server accepts the message, and safe errors when delivery is unavailable.
 
 ## API conventions
 
