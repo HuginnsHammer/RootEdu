@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.routes.health import router as health_router
+from app.api.routes.mobile import router as mobile_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -11,3 +12,4 @@ app = FastAPI(
     redoc_url=None,
 )
 app.include_router(health_router, prefix=settings.api_v1_prefix)
+app.include_router(mobile_router, prefix=settings.api_v1_prefix)
