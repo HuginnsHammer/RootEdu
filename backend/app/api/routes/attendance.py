@@ -1,5 +1,6 @@
 import base64
-from datetime import timezone
+from datetime import UTC
+from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -25,10 +26,16 @@ def authenticated_student(request: Request) -> dict:
     """Authentication middleware must populate request.state.identity."""
     identity = getattr(request.state, "identity", None)
     if not isinstance(identity, dict):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required.",
+        )
     required = ("sub", "institution_id", "cohort_id", "role")
     if any(not identity.get(key) for key in required) or identity["role"] != "student":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="A verified student identity is required.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="A verified student identity is required.",
+        )
     try:
         result = {
             "student_id": UUID(identity["sub"]),
@@ -45,21 +52,30 @@ def authenticated_student(request: Request) -> dict:
 @router.post("/devices/bind", response_model=DeviceBindReceipt, status_code=201)
 async def bind_development_device(
     payload: DeviceBindRequest,
-    identity: dict = Depends(authenticated_student),
-    db: Session = Depends(get_db),
+    identity: Annotated[dict, Depends(authenticated_student)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> DeviceBindReceipt:
     """Local-only device binding until Android hardware attestation is integrated."""
     if get_settings().app_env != "development":
         raise HTTPException(
             status_code=503,
-            detail="Production device attestation is not configured. Device binding is unavailable.",
+            detail=(
+                "Production device attestation is not configured. "
+                "Device binding is unavailable."
+            ),
         )
     try:
         public_key = base64.b64decode(payload.public_key, validate=True)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="Invalid Ed25519 public key encoding.") from exc
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid Ed25519 public key encoding.",
+        ) from exc
     if len(public_key) != 32:
-        raise HTTPException(status_code=422, detail="Ed25519 public keys must be 32 bytes.")
+        raise HTTPException(
+            status_code=422,
+            detail="Ed25519 public keys must be 32 bytes.",
+        )
     provider = DevelopmentAttestationProvider()
     if not await provider.verify(payload.attestation, payload.public_key):
         raise HTTPException(status_code=403, detail="Development attestation failed.")
@@ -75,12 +91,18 @@ async def bind_development_device(
                       AND student_id = :student_id AND revoked_at IS NULL
                     FOR UPDATE
                 """),
-                {"institution_id": identity["institution_id"], "student_id": identity["student_id"]},
+                {
+                    "institution_id": identity["institution_id"],
+                    "student_id": identity["student_id"],
+                },
             ).scalar_one_or_none()
             if active is not None:
                 raise HTTPException(
                     status_code=409,
-                    detail="This student already has an active device. An approved reset is required.",
+                    detail=(
+                        "This student already has an active device. "
+                        "An approved reset is required."
+                    ),
                 )
             db.execute(
                 text("""
@@ -105,23 +127,36 @@ async def bind_development_device(
                 student_id=identity["student_id"],
                 event_type="DEVICE_BOUND_DEV",
                 severity="info",
-                details={"device_id": str(device_id), "attestation_level": "development"},
+                details={
+                    "device_id": str(device_id),
+                    "attestation_level": "development",
+                },
             )
     except IntegrityError as exc:
-        raise HTTPException(status_code=409, detail="An active device is already registered.") from exc
+        raise HTTPException(
+            status_code=409,
+            detail="An active device is already registered.",
+        ) from exc
 
-    return DeviceBindReceipt(device_id=device_id, attestation_level="development", status="bound")
+    return DeviceBindReceipt(
+        device_id=device_id,
+        attestation_level="development",
+        status="bound",
+    )
 
 
 @router.post("/check-in", response_model=AttendanceReceipt, status_code=201)
 def attendance_check_in(
     payload: AttendanceCheckInRequest,
-    identity: dict = Depends(authenticated_student),
-    db: Session = Depends(get_db),
+    identity: Annotated[dict, Depends(authenticated_student)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> AttendanceReceipt:
     device_id = identity.get("device_id")
     if device_id is None:
-        raise HTTPException(status_code=403, detail="This account has no registered active device.")
+        raise HTTPException(
+            status_code=403,
+            detail="This account has no registered active device.",
+        )
     try:
         with db.begin():
             set_tenant_context(db, identity["institution_id"])
@@ -148,12 +183,23 @@ def attendance_check_in(
                 student_id=identity["student_id"],
                 event_type=exc.event_type,
                 severity=exc.severity,
-                details={"message": exc.message, "session_id": str(payload.session_id)},
+                details={
+                    "message": exc.message,
+                    "session_id": str(payload.session_id),
+                },
             )
         raise HTTPException(status_code=403, detail=exc.message) from exc
     except IntegrityError as exc:
-        constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
-        if constraint not in {"uq_attendance_once_per_student", "attendance_checkins_nonce_hash_key"}:
+        constraint = getattr(
+            getattr(exc.orig, "diag", None),
+            "constraint_name",
+            None,
+        )
+        replay_constraints = {
+            "uq_attendance_once_per_student",
+            "attendance_checkins_nonce_hash_key",
+        }
+        if constraint not in replay_constraints:
             raise
         with db.begin():
             set_tenant_context(db, identity["institution_id"])
@@ -163,14 +209,20 @@ def attendance_check_in(
                 student_id=identity["student_id"],
                 event_type="REPLAY_ATTACK_DETECTED",
                 severity="critical",
-                details={"session_id": str(payload.session_id), "constraint": str(constraint)},
+                details={
+                    "session_id": str(payload.session_id),
+                    "constraint": str(constraint),
+                },
             )
-        raise HTTPException(status_code=409, detail="This attendance challenge has already been used.") from exc
+        raise HTTPException(
+            status_code=409,
+            detail="This attendance challenge has already been used.",
+        ) from exc
 
     return AttendanceReceipt(
         checkin_id=checkin_id,
         session_id=payload.session_id,
-        verified_at=verified_at.astimezone(timezone.utc).isoformat(),
+        verified_at=verified_at.astimezone(UTC).isoformat(),
         status="present_verified",
         assurance=assurance,
     )
