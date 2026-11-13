@@ -26,6 +26,10 @@
 
 4. Use a compatible Expo Go SDK 54 client to scan the QR code. A physical phone and laptop must be on the same trusted Wi-Fi. Do not expose the development API to the public internet.
 
+## Android native build compatibility
+
+The app config applies a small Expo SDK 54 config plugin for expo-sqlite. It sets the optional expo.sqlite.customBuildFlags Gradle property to an empty value so Android autolinking uses SQLite's normal local Gradle project instead of the publication-script path that currently omits the publication version in generated autolinking metadata. The empty value adds no custom SQLite compiler flags and preserves SQLite's default build features. This is applied automatically by Expo prebuild for both local and CI Android builds.
+
 ## Shareable Android tester APK
 
 A GitHub Actions debug APK artifact is produced for pull requests and retained for 14 days. For a durable share link, create and push a test tag after the desired code is merged:
