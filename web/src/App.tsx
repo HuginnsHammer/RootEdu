@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import {
   AlertCircle, ArrowRight, ArrowUpRight, BookOpen, CalendarDays, Check,
   CheckCircle2, GraduationCap, HeartHandshake, LibraryBig, Menu, MessageCircle,
@@ -70,7 +71,7 @@ export default function App() {
 
   useEffect(() => { void refreshConnection(); }, []);
 
-  async function submitFeedback(event: React.FormEvent<HTMLFormElement>) {
+  async function submitFeedback(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (message.trim().length < 10) return;
     setSending(true);
