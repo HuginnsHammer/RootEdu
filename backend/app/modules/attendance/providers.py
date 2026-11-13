@@ -1,6 +1,6 @@
+# ruff: noqa: I001
 from dataclasses import dataclass
 from typing import Literal, Protocol
-
 
 ProximityMethod = Literal["ble", "ultrasound", "mock"]
 
