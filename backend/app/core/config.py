@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_name: str = "RootEdu API"
     app_env: str = "development"
     api_v1_prefix: str = "/api/v1"
+    web_allowed_origins: list[str] = Field(default_factory=list)
     tenant_id: str = "must_main"
     institution_name: str = "Meru University of Science and Technology"
     allowed_email_domains: list[str] = Field(default_factory=lambda: ["students.must.ac.ke"])
