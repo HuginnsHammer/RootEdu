@@ -1,6 +1,5 @@
 import hashlib
-import os
-import secrets
+import json
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
@@ -123,7 +122,7 @@ def check_in(
         raise AttendanceRejected("DEVICE_MISMATCH", "No active device is bound to this student.", "high")
 
     secret = _secret()
-    if not verify_rolling_code(secret, session_id, code):
+    if not verify_rolling_code(secret, session_id, code, at=int(now.timestamp())):
         raise AttendanceRejected("INVALID_SESSION_CODE", "The rolling attendance code is invalid.", "medium")
     if not verify_room_token(secret, session_id, room_token):
         raise AttendanceRejected("ROOM_TOKEN_MISMATCH", "The room token is invalid.", "high")
@@ -133,40 +132,29 @@ def check_in(
         raise AttendanceRejected("DEVICE_SIGNATURE_INVALID", "Device signature verification failed.", "critical")
 
     nonce_hash = hashlib.sha256(nonce.encode()).hexdigest()
-    existing = db.execute(
-        text("SELECT id FROM attendance_checkins WHERE nonce_hash = :nonce_hash"),
-        {"nonce_hash": nonce_hash},
-    ).scalar_one_or_none()
-    if existing is not None:
-        raise AttendanceRejected("REPLAY_ATTACK_DETECTED", "This signed check-in challenge was already used.", "critical")
-
     checkin_id = uuid4()
-    try:
-        db.execute(
-            text("""
-                INSERT INTO attendance_checkins
-                    (id, institution_id, session_id, student_id, device_id,
-                     nonce_hash, proximity_method, rssi_dbm, verified_at)
-                VALUES
-                    (:id, :institution_id, :session_id, :student_id, :device_id,
-                     :nonce_hash, :method, :rssi, :verified_at)
-            """),
-            {
-                "id": checkin_id,
-                "institution_id": institution_id,
-                "session_id": session_id,
-                "student_id": student_id,
-                "device_id": device_id,
-                "nonce_hash": nonce_hash,
-                "method": proximity_method,
-                "rssi": rssi_dbm,
-                "verified_at": now,
-            },
-        )
-        db.flush()
-    except Exception:
-        # Unique constraints are the final race-safe replay/duplicate defense.
-        raise
+    db.execute(
+        text("""
+            INSERT INTO attendance_checkins
+                (id, institution_id, session_id, student_id, device_id,
+                 nonce_hash, proximity_method, rssi_dbm, verified_at)
+            VALUES
+                (:id, :institution_id, :session_id, :student_id, :device_id,
+                 :nonce_hash, :method, :rssi, :verified_at)
+        """),
+        {
+            "id": checkin_id,
+            "institution_id": institution_id,
+            "session_id": session_id,
+            "student_id": student_id,
+            "device_id": device_id,
+            "nonce_hash": nonce_hash,
+            "method": proximity_method,
+            "rssi": rssi_dbm,
+            "verified_at": now,
+        },
+    )
+    db.flush()
     assurance = "development_mock" if proximity_method == "mock" else "device_signature_and_session_code"
     return checkin_id, now, assurance
 
@@ -192,6 +180,6 @@ def log_security_event(
             "event_type": event_type,
             "severity": severity,
             "actor_id": student_id,
-            "details": __import__("json").dumps(details),
+            "details": json.dumps(details),
         },
     )
