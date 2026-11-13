@@ -16,13 +16,19 @@ def _mac(secret: bytes, message: bytes) -> bytes:
 def rolling_code(secret: bytes, session_id: UUID, at: int | None = None) -> str:
     """Six-digit, six-second HMAC code bound to one attendance session."""
     step = int(time.time() if at is None else at) // 6
-    digest = _mac(secret, b"rootedu:attendance:totp:v1:" + session_id.bytes + struct.pack(">Q", step))
+    message = b"rootedu:attendance:totp:v1:" + session_id.bytes
+    digest = _mac(secret, message + struct.pack(">Q", step))
     offset = digest[-1] & 0x0F
     value = struct.unpack(">I", digest[offset : offset + 4])[0] & 0x7FFFFFFF
     return f"{value % 1_000_000:06d}"
 
 
-def verify_rolling_code(secret: bytes, session_id: UUID, submitted: str, at: int | None = None) -> bool:
+def verify_rolling_code(
+    secret: bytes,
+    session_id: UUID,
+    submitted: str,
+    at: int | None = None,
+) -> bool:
     now = int(time.time() if at is None else at)
     return any(
         hmac.compare_digest(rolling_code(secret, session_id, now + drift * 6), submitted)
@@ -63,9 +69,14 @@ def canonical_checkin_message(
     return "\n".join(fields).encode("utf-8")
 
 
-def verify_device_signature(public_key_b64: str, signature_b64: str, message: bytes) -> bool:
+def verify_device_signature(
+    public_key_b64: str,
+    signature_b64: str,
+    message: bytes,
+) -> bool:
     try:
-        public_key = Ed25519PublicKey.from_public_bytes(base64.b64decode(public_key_b64, validate=True))
+        public_key_bytes = base64.b64decode(public_key_b64, validate=True)
+        public_key = Ed25519PublicKey.from_public_bytes(public_key_bytes)
         signature = base64.b64decode(signature_b64, validate=True)
         public_key.verify(signature, message)
         return True
