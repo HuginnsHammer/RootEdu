@@ -90,6 +90,19 @@ def check_in(
             "SIGNAL_THRESHOLD_VIOLATION", "BLE signal did not meet the configured threshold.", "low"
         )
 
+    membership = db.execute(
+        text("""
+            SELECT 1 FROM student_cohort_memberships
+            WHERE institution_id = :institution_id
+              AND student_id = :student_id AND cohort_id = :cohort_id
+              AND is_active = true
+            FOR SHARE
+        """),
+        {"institution_id": institution_id, "student_id": student_id, "cohort_id": cohort_id},
+    ).first()
+    if membership is None:
+        raise AttendanceRejected("COHORT_MISMATCH", "Student is not actively enrolled in this cohort.", "high")
+
     session_row = db.execute(
         text("""
             SELECT cohort_id, window_start, window_end, status
@@ -127,7 +140,9 @@ def check_in(
     if not verify_room_token(secret, session_id, room_token):
         raise AttendanceRejected("ROOM_TOKEN_MISMATCH", "The room token is invalid.", "high")
 
-    message = canonical_checkin_message(session_id, student_id, device_id, nonce, code, room_token)
+    message = canonical_checkin_message(
+        session_id, student_id, device_id, nonce, code, room_token, proximity_method, rssi_dbm
+    )
     if not verify_device_signature(device["public_key"], signature, message):
         raise AttendanceRejected("DEVICE_SIGNATURE_INVALID", "Device signature verification failed.", "critical")
 
