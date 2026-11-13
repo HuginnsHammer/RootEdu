@@ -56,7 +56,7 @@ jobs:
           java-version: "17"
       - uses: android-actions/setup-android@v3
       - run: npm install --no-audit --no-fund
-      - run: npx expo prebuild --platform android --no-install
+      - run: APP_VARIANT=development npx expo prebuild --platform android --no-install
       - name: Build installable debug APK
         run: |
           cd android
