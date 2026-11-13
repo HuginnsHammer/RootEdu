@@ -11,7 +11,11 @@ def test_feedback_requires_meaningful_message() -> None:
 
 def test_feedback_rejects_invalid_reply_address() -> None:
     with pytest.raises(ValidationError):
-        FeedbackSubmission(category="idea", message="A useful idea for RootEdu", reply_email="not-an-email")
+        FeedbackSubmission(
+            category="idea",
+            message="A useful idea for RootEdu",
+            reply_email="not-an-email",
+        )
 
 
 def test_feedback_accepts_valid_beta_feedback() -> None:
