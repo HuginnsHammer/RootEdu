@@ -28,7 +28,7 @@
 
 ## Android native build compatibility
 
-The app config applies a small Expo SDK 54 config plugin for expo-sqlite. It sets the optional expo.sqlite.customBuildFlags Gradle property to an empty value so Android autolinking uses SQLite's normal local Gradle project instead of the publication-script path that currently omits the publication version in generated autolinking metadata. The empty value adds no custom SQLite compiler flags and preserves SQLite's default build features. This is applied automatically by Expo prebuild for both local and CI Android builds.
+Expo SDK 54 can use prebuilt Android artifacts for some Expo modules. RootEdu explicitly opts `expo-sqlite` out of prebuilt autolinking with the supported `expo.autolinking.android.buildFromSource` setting in `package.json`. This makes Gradle include SQLite's local Android project rather than consume its publication metadata, avoiding the missing `Publication.version` failure seen in the APK workflow. It does not disable SQLite or change its runtime API; it builds the installed package from source. Expo prebuild applies this configuration automatically for local and CI builds.
 
 ## Shareable Android tester APK
 
